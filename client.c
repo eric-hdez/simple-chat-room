@@ -11,9 +11,10 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#define BLOCK 4096
-#define KB    1024
-#define EXIT  "exit"
+#define BLOCK         4096
+#define KB            1024
+#define CONN_LOST_MSG "Connection to the server has been lost.\n"
+#define EXIT          "exit"
 
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -60,10 +61,8 @@ void *handle_send_msg(void *args) {
         fgets(msgin, BLOCK, stdin);
         send(targs->clientfd, msgin, strlen(msgin), 0);
         if (memcmp(msgin, EXIT, strlen(EXIT)) == 0) {
-            pthread_mutex_lock(&mutex);
-            pthread_cond_signal(&cond);
             flag = true;
-            pthread_mutex_unlock(&mutex);
+            pthread_cond_signal(&cond);
             break;
         }
         memset(msgin, 0, sizeof(msgin));
@@ -85,15 +84,32 @@ void *handle_recv_msg(void *args) {
     return (void *) 0;
 }
 
-int main(int argc, char *argv[]) {
-    int option, portnumber;
-    char *username = NULL;
+void program_usage(FILE *stream, char *exec) {
+    fprintf(stream, 
+        "SYNOPSIS\n"
+        "A client that connects to a chat room that runs on localhost\n"
+        "\n"
+        "USAGE\n"
+        "   %s [-h] [-u username] [-p portnumber]\n"
+        "\n"
+        "OPTIONS\n"
+        "   -h               displays a help menu for users\n"
+        "   -u username      username for chat room\n"
+        "   -p portnumber    connecting port for server connection\n",
+        exec);
+}
 
-    while ((option = getopt(argc, argv, "p:u:")) != -1) {
-        switch (option) {
+int main(int argc, char *argv[]) {
+    int opt, portnumber;
+    char *username = NULL;
+    int nbytes;
+
+    while ((opt = getopt(argc, argv, "h:p:u:")) != -1) {
+        switch (opt) {
+        case 'h': program_usage(stdout, argv[0]); exit(EXIT_SUCCESS);
         case 'p': portnumber = strtouint16(optarg); break;
         case 'u': username = optarg; break;
-        default: exit(EXIT_FAILURE);
+        default: program_usage(stderr, argv[0]); exit(EXIT_FAILURE);
         }
     }
 
@@ -103,16 +119,23 @@ int main(int argc, char *argv[]) {
 
     int clientfd = create_client_socket(portnumber);
 
-    int nbytes = send(clientfd, username, strlen(username), 0);
+    // send user's name to server
+    nbytes = send(clientfd, username, strlen(username), 0);
     if (nbytes == 0 || nbytes == -1) {
         close(clientfd);
-        return EXIT_SUCCESS;
+        errx(EXIT_FAILURE, CONN_LOST_MSG);
     }
 
-    char buf[KB] = { 0 };
-    recv(clientfd, buf, KB, 0);
-    write(STDOUT_FILENO, buf, strlen(buf));
+    // recieve the welcome message for the server
+    char welcomemsg[KB] = { 0 };
+    nbytes = recv(clientfd, welcomemsg, KB, 0);
+    if (nbytes == 0 || nbytes == -1) {
+        close(clientfd);
+        errx(EXIT_FAILURE, CONN_LOST_MSG);
+    }
+    write(STDOUT_FILENO, welcomemsg, strlen(welcomemsg));
 
+    // create the threads for recieving and sending messages
     thread_args_t *args = calloc(1, sizeof(thread_args_t));
     args->clientfd = clientfd;
 
@@ -120,6 +143,7 @@ int main(int argc, char *argv[]) {
     pthread_create(&client_tids[0], NULL, handle_send_msg, (void *) args);
     pthread_create(&client_tids[1], NULL, handle_recv_msg, (void *) args);
 
+    // mutex and condition wait used for purpose of reducing CPU usage
     while(true) {
         pthread_mutex_lock(&mutex);
         if (!flag) {
