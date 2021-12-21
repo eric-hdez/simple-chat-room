@@ -158,15 +158,35 @@ void *handle_user_conn(void *args) {
     return (void *) 0;
 }
 
+void program_usage(FILE *stream, char *exec) {
+    fprintf(stream, 
+        "SYNOPSIS\n"
+        "Simple Chat room in C that runs on localhost\n"
+        "\n"
+        "USAGE\n"
+        "   %s [-p portnumber]\n"
+        "\n"
+        "OPTIONS\n"
+        "   -h               displays a help menu for users\n"
+        "   -p portnumber    listening port for client connections\n",
+        exec);
+}
+
 int main(int argc, char *argv[]) {
-    int listenfd, opt;
+    int opt, listenfd;
     uint16_t portnumber;
 
-    while((opt = getopt(argc, argv, "p:")) != -1) {
-        switch(opt) {
+    while((opt = getopt(argc, argv, "h:p:")) != -1) {
+        switch (opt) {
+        case 'h': program_usage(stdout, argv[0]); exit(EXIT_SUCCESS);
         case 'p': portnumber = strtouint16(optarg); break;
-        default: errx(EXIT_FAILURE, "USAGE\n%s : [-p portnumber]\n", argv[0]);
+        default: program_usage(stderr, argv[0]); exit(EXIT_FAILURE);
         }
+    }
+
+    if (argc < 2) {
+        program_usage(stderr, argv[0]);
+        exit(EXIT_FAILURE);
     }
 
     if (portnumber == 0) {
