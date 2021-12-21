@@ -1,4 +1,5 @@
 #include <err.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -74,10 +75,9 @@ void *handle_send_msg(void *args) {
 void *handle_recv_msg(void *args) {
     thread_args_t *targs = args;
     char msgin[KB + BLOCK] = { 0 };
-    int nbytes;
 
     while(true) {
-        nbytes = recv(targs->clientfd, msgin, KB + BLOCK, 0);
+        recv(targs->clientfd, msgin, KB + BLOCK, 0);
         write(STDOUT_FILENO, msgin, strlen(msgin));
         memset(msgin, 0, sizeof(msgin));
     }
