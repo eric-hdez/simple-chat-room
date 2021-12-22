@@ -14,6 +14,7 @@
 #define BLOCK         4096
 #define KB            1024
 #define CONN_LOST_MSG ">> Connection to the server has been lost.\n"
+#define CONN_IMP_MSG  ">> Could not establish a connection to the server"
 #define FAILED_MSG    ">> Failed to send your last message.\n"
 #define LOST_MSG      ">> A message has been lost.\n"
 #define EXIT          "exit"
@@ -146,6 +147,9 @@ int main(int argc, char *argv[]) {
     }
 
     int clientfd = create_client_socket(portnumber);
+    if (clientfd < 0) {
+        errx(EXIT_FAILURE, CONN_IMP_MSG);
+    }
 
     // send user's name to server
     nbytes = send(clientfd, username, strlen(username), 0);
