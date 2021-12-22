@@ -124,6 +124,7 @@ void *handle_user_conn(void *args) {
     // print a connected message for the user and welcome them
     sprintf(msgout, CONN_MSG, username);
     write(STDOUT_FILENO, msgout, strlen(msgout));
+    broadcast_msg(targs->connfd, targs->users, msgout);
     memset(msgout, 0, sizeof(msgout));
     sprintf(msgout, "%s%s", BEGIN_MSG, WELCOME_MSG);
     send(targs->connfd, msgout, strlen(msgout), 0);
@@ -153,6 +154,7 @@ void *handle_user_conn(void *args) {
     // user is disconnecting
     sprintf(msgout, LEFT_MSG, username);
     write(STDOUT_FILENO, msgout, strlen(msgout));
+    broadcast_msg(targs->connfd, targs->users, msgout);
     close(targs->connfd);
     free(targs);
     return (void *) 0;
