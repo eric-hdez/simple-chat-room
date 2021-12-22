@@ -13,7 +13,9 @@
 
 #define BLOCK         4096
 #define KB            1024
-#define CONN_LOST_MSG "Connection to the server has been lost.\n"
+#define CONN_LOST_MSG ">> Connection to the server has been lost.\n"
+#define FAILED_MSG    ">> Failed to send your last message.\n"
+#define LOST_MSG      ">> A message has been lost.\n"
 #define EXIT          "exit"
 
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -56,10 +58,23 @@ int create_client_socket(uint16_t port) {
 void *handle_send_msg(void *args) {
     thread_args_t *targs = args;
     char msgin[BLOCK] = { 0 };
+    int nbytes = 0;
 
     while(true) {
         fgets(msgin, BLOCK, stdin);
-        send(targs->clientfd, msgin, strlen(msgin), 0);
+        nbytes = send(targs->clientfd, msgin, strlen(msgin), 0);
+        if (nbytes == 0) {
+            write(STDOUT_FILENO, CONN_LOST_MSG, strlen(CONN_LOST_MSG));
+            flag = true;
+            pthread_cond_signal(&cond);
+            break;
+        }
+
+        if (nbytes == -1) {
+            write(STDOUT_FILENO, FAILED_MSG, strlen(FAILED_MSG));
+            continue;
+        }
+
         if (memcmp(msgin, EXIT, strlen(EXIT)) == 0) {
             flag = true;
             pthread_cond_signal(&cond);
@@ -74,9 +89,22 @@ void *handle_send_msg(void *args) {
 void *handle_recv_msg(void *args) {
     thread_args_t *targs = args;
     char msgin[KB + BLOCK] = { 0 };
+    int nbytes = 0;
 
     while(true) {
-        recv(targs->clientfd, msgin, KB + BLOCK, 0);
+        nbytes = recv(targs->clientfd, msgin, KB + BLOCK, 0);
+        if (nbytes == 0) {
+            write(STDOUT_FILENO, CONN_LOST_MSG, strlen(CONN_LOST_MSG));
+            flag = true;
+            pthread_cond_signal(&cond);
+            break;
+        }
+
+        if (nbytes == -1) {
+            write(STDOUT_FILENO, LOST_MSG, strlen(LOST_MSG));
+            continue;
+        }
+
         write(STDOUT_FILENO, msgin, strlen(msgin));
         memset(msgin, 0, sizeof(msgin));
     }
@@ -121,7 +149,7 @@ int main(int argc, char *argv[]) {
 
     // send user's name to server
     nbytes = send(clientfd, username, strlen(username), 0);
-    if (nbytes == 0 || nbytes == -1) {
+    if (nbytes <= 0) {
         close(clientfd);
         errx(EXIT_FAILURE, CONN_LOST_MSG);
     }
@@ -129,7 +157,7 @@ int main(int argc, char *argv[]) {
     // recieve the welcome message for the server
     char welcomemsg[KB] = { 0 };
     nbytes = recv(clientfd, welcomemsg, KB, 0);
-    if (nbytes == 0 || nbytes == -1) {
+    if (nbytes <= 0) {
         close(clientfd);
         errx(EXIT_FAILURE, CONN_LOST_MSG);
     }

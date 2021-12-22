@@ -18,11 +18,11 @@
 #define BLOCK         4096
 #define MSG_FORMAT    "%s: %s"
 #define BEGIN_MSG     "============== Chat Room ==============\n"
-#define CONN_MSG      "%s has connected!\n"
+#define CONN_MSG      ">> %s has connected!\n"
 #define WELCOME_MSG   "Welcome to the chat room!\n"
 #define CONN_FAIL_MSG "Could not connect. User limit has been met.\n"
 #define FAIL_MSG      "Your message failed to send.\n"
-#define LEFT_MSG      "%s has disconnected.\n"
+#define LEFT_MSG      ">> %s has disconnected.\n"
 #define EXIT_MSG      "exit"
 
 pthread_mutex_t users_mutex = PTHREAD_MUTEX_INITIALIZER;
