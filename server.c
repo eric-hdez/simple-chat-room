@@ -158,6 +158,11 @@ void *handle_user_conn(void *args) {
     return (void *) 0;
 }
 
+// outputs the program usage to a specified file stream
+//
+// stream : file stream
+// exec   : program's exec name
+//
 void program_usage(FILE *stream, char *exec) {
     fprintf(stream, 
         "SYNOPSIS\n"

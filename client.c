@@ -28,6 +28,11 @@ typedef struct thread_args_t {
 
 bool flag = false;
 
+// converts an integer in string represention to an unsigned 
+// 16 bit integer
+//
+// number : integer in string representation
+//
 uint16_t strtouint16(char *number) {
     char *last;
     long num = strtol(number, &last, 10);
@@ -38,6 +43,11 @@ uint16_t strtouint16(char *number) {
     return num;
 }
 
+// creates & connects a client connection socket on the provided 
+// port
+//
+// port : port number to establish a connection
+// 
 int create_client_socket(uint16_t port) {
     int clientfd = socket(AF_INET, SOCK_STREAM, 0);
     if (clientfd < 0) {
@@ -56,6 +66,11 @@ int create_client_socket(uint16_t port) {
     return clientfd;
 }
 
+// thread function that handles sending a client's messages
+// to the server listening on the port
+//
+// args : thread function arguments
+//
 void *handle_send_msg(void *args) {
     thread_args_t *targs = args;
     char msgin[BLOCK] = { 0 };
@@ -87,6 +102,11 @@ void *handle_send_msg(void *args) {
     return (void *) 0;
 }
 
+// thread function that handles recieving other client's messages
+// from the server
+//
+// args : thread function arguments
+//
 void *handle_recv_msg(void *args) {
     thread_args_t *targs = args;
     char msgin[KB + BLOCK] = { 0 };
@@ -113,6 +133,11 @@ void *handle_recv_msg(void *args) {
     return (void *) 0;
 }
 
+// outputs the program usage to a specified file stream
+//
+// stream : file stream
+// exec   : program's exec name
+//
 void program_usage(FILE *stream, char *exec) {
     fprintf(stream, 
         "SYNOPSIS\n"
